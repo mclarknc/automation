@@ -1,0 +1,16 @@
+{
+    "eventName": "reading",
+    "url": "http://oldboy.net:8000/api/v1/reading/",
+    "requestType": "POST",
+    "json": {
+	"value": "{{value}}",
+	"channel": "{{channel}}",
+	"monitor_time": "{{monitor_time}}"
+    },
+    "headers": {
+	"Content-Type": "application/json",
+	"Authorization": "ApiKey mdc@oldboy.net:b9c897c820aa171df6f4df3bf3fb4c3bda9d2d89"
+    },
+    "mydevices": true
+}
+	

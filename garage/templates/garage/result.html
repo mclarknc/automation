@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block body %}
+<a class="btn btn-link" href="/garage/control">Back to control panel</a>
+<h1>Result</h1>
+{{ result }}
+{% if not_connected %}
+<div class="alert alert-danger" role="alert">
+  <strong>Oh snap!</strong> Monitor not connected to backend!
+</div>
+{% elif failure %}
+<div class="alert alert-danger" role="alert">
+  <strong>Oh snap!</strong> Something went wrong!<br />
+  {{ result }}
+</div>
+{% else %}
+<div class="alert alert-success" role="alert">
+  <strong>Success</strong> Garage door success!
+</div>
+{% endif %}
+{% endblock %}
