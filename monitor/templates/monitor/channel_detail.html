@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block body %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<div class="col-md-9">
+    <h4>{{ channel }}<small> last {{ days }} day{{ days|pluralize }}</small></h4>
+    <div id="plot" style="width: 1000px; height:350px;"></div>
+    <script>
+        $(function() {
+	    $.ajax({
+                url: "/monitor/get_readings/{{ channel.id }}/{{ days }}/"
+         })
+            .done(function(results) {
+                var xval = [];
+                var yval = [];
+                for (var time in results) {
+                    xval.push(time);
+                    yval.push(results[time]);
+                }
+                var plotTrace = {
+                    x: xval,
+                    y: yval
+                }
+                var plotData = [plotTrace]
+	        var layout = {
+                    yaxis: {
+	                {% if system == 0 %}
+                        title: "{{ channel.get_units.0 }}"
+                        {% else %}
+	                title: "{{ channel.get_units.1 }}"
+	                {% endif %}
+                    }
+                };
+                Plotly.newPlot(plot, plotData, layout);
+            });
+        });
+    </script>
+{% endblock %}

@@ -1,6 +1,6 @@
 {
-    "eventName": "reading",
-    "url": "https://oldboy.net:443/api/v1/reading/",
+    "eventName": "record",
+    "url": "http://oldboy.net/api/v1/reading/",
     "requestType": "POST",
     "json": {
 	"value": "{{value}}",
@@ -11,7 +11,6 @@
 	"Content-Type": "application/json",
 	"Authorization": "ApiKey mdc@oldboy.net:b9c897c820aa171df6f4df3bf3fb4c3bda9d2d89"
     },
-    "mydevices": true,
-    "rejectUnauthorized": false
+    "mydevices": true
 }
 	

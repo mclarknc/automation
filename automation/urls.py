@@ -11,7 +11,9 @@ v1_api.register(ChannelResource())
 v1_api.register(ReadingResource())
 
 urlpatterns = [
+    url(r'^$', include('monitor.urls')),
     url(r'^admin/', admin.site.urls),
     url(r'^garage/', include('garage.urls')),
+    url(r'^monitor/', include('monitor.urls')),
     url(r'^api/', include(v1_api.urls)),
 ]

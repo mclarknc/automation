@@ -1,11 +1,14 @@
 from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 from automation.settings import PARTICLE_DEVICE_ID, PARTICLE_ACCESS_TOKEN
 import requests
 import json
 
+@login_required
 def control(request):
     return render(request, 'garage/control.html', {})
 
+@login_required
 def particle_open(request):
     url = "https://api.particle.io/v1/devices/"
     url += PARTICLE_DEVICE_ID

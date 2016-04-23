@@ -76,6 +76,12 @@ class Channel(models.Model):
     name = models.CharField(max_length=200)
     status = models.IntegerField(choices=CHANNEL_STATUS_CHOICES)
 
+    def get_units(self):
+        return [self.channel_type.units.unit_imperial, self.channel_type.units.unit_metric]
+
+    def get_unit_abbrevs(self):
+        return [self.channel_type.units.abbrev_imperial, self.channel_type.units.abbrev_metric]
+
     def __str__(self):
         return ': '.join([self.monitor.name, self.name])
 
@@ -88,3 +94,78 @@ class Reading(models.Model):
 
     def __str__(self):
         return ': '.join([self.monitor_time.strftime("%Y-%m-%d %H:%M:%S"), str(self.value)])
+
+class Preference(models.Model):
+    user = models.ForeignKey(User)
+    measurement_system = models.IntegerField(choices=Unit.UNIT_CHOICES, default=Unit.IMPERIAL)
+
+    def __str__(self):
+        return ' '.join([self.user.first_name, self.user.last_name])
+
+class RuleType(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.CharField(max_length=100)
+    eval_func = models.CharField(max_length=100)
+    template_name = models.CharField(max_length=100, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+class Rule(models.Model):
+    # rule states
+    RULE_ACTIVE = 0
+    RULE_INACTIVE = 1
+    RULE_PAUSED = 2
+
+    # constants for specifying actions
+    SEND_EMAIL_ALERT = 0
+    SEND_TEXT_ALERT = 1
+    SEND_BOTH = 2
+    ACTIONS = (
+        (SEND_EMAIL_ALERT, 'send email alert'),
+        (SEND_TEXT_ALERT, ' send text alert'),
+        (SEND_BOTH, 'send email and text alert'),
+    )
+
+    name = models.CharField(max_length=100)
+    rule_type = models.ForeignKey(RuleType)
+    lower_threshold = models.FloatField(null=True, blank=True)
+    upper_threshold = models.FloatField(null=True, blank=True)
+    action = models.IntegerField()
+    contacts = models.ManyToManyField(User, related_name = 'rules_rule_contacts')
+    state = models.IntegerField(default=RULE_ACTIVE)
+
+    def descriptive_name(self):
+        val = ""
+        if self.lower_threshold and not self.upper_threshold:
+            val = "{} {}".format(self.name, self.lower_threshold)
+        elif self.upper_threshold and not self.lower_threshold:
+            val = "{} {}".format(self.name, self.upper_threshold)
+        else:
+            val = "{} {} and {}".format(self.name, self.lower_threshold self.upper_threshold)
+        
+        return val
+
+    def __str__(self):
+        return self.name
+
+    def evaluate(self, channel, reading):
+        # get the eval function by name
+        func = getattr(self, self.rule_type.eval_func)
+        # call the eval function and return its result
+        return func(channel, reading)
+
+    def eval_lt(self, channel, reading):
+        return reading.value < self.lower_threshold
+
+    def eval_lte(self, channel, reading):
+        return reading.value <= self.lower_threshold
+
+    def eval_gt(self, channel, reading):
+        return reading.value > self.upper_threshold
+
+    def eval_gte(self, channel, reading):
+        return reading.value >= self.upper_threshold
+
+    def range(self, channel, reading):
+        return self.eval_lt(channel, reading) or self.eval_gt(channel, reading)
