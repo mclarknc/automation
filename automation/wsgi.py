@@ -10,7 +10,7 @@ https://docs.djangoproject.com/en/1.9/howto/deployment/wsgi/
 import os, sys
 
 from django.core.wsgi import get_wsgi_application
-sys.path.append('/usr/local/automation')
+sys.path.append('/data2/local/automation')
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "automation.settings")
 
 application = get_wsgi_application()

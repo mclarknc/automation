@@ -41,3 +41,6 @@ class ReadingResource(ModelResource):
             'monitor': ALL_WITH_RELATIONS,
         }
         resource_name = 'reading'
+
+    def get_object_list(self, request):
+        return super(ReadingResource, self).get_object_list(request).order_by('-monitor_time')

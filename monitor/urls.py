@@ -9,4 +9,5 @@ urlpatterns = [
     url(r'^get_readings/(?P<channel_id>\d+)/(?P<days>\d+)/$', views.get_readings),
     url(r'^channel/(?P<channel_id>\d+)/$', views.channel),
     url(r'^channel/(?P<channel_id>\d+)/(?P<days>\d+)/$', views.channel),
+    url(r'^ack/', views.ack),
 ]

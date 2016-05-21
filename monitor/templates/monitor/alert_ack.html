@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Acknowledge Alert{% endblock %}
+{% block body %}
+{% if previously_acked %}
+<a class="mdl-button mdl-js-button mdl-js-ripple-effect" role="button" href="/monitor/channel/{{ alert.monitor.id }}/"><i class="material-icons">arrow_back</i>Back to {{ alert.monitor }} monitor</a><br /><br />
+Alert from {{ alert.monitor }} monitor: {{ alert.rule.descriptive_name }}<br />already acknowledged by {{ acknowledger.get_full_name }} on  {{ alert.acknowledged_time }}<br /><br />
+
+{% elif success %}
+<a class="mdl-button mdl-js-button mdl-js-ripple-effect" role="button" href="/monitor/channel/{{ alert.monitor.id }}/"><i class="material-icons">arrow_back</i>Back to {{ alert.monitor }} monitor</a><br /><br />
+<div class="alert alert-success" role="alert">
+Success! Alert from {{ alert.monitor }} monitor: {{ alert.rule.descriptive_name }}<br /> acknowledged by {{ acknowledger.get_full_name }} on {{ alert.acknowledged_time }}<br /><br />
+</div>
+
+{% else %}
+<form role="form" action="/monitor/ack/?aid={{ alert.uuid }}&bid={{ user.id }}" method="post">
+{% csrf_token %}
+Alert from {{ alert.monitor }} monitor: {{ alert.rule.descriptive_name }}<br /><br />
+<button class="mdl-button" type="submit" value="Acknowledge">Acknowledge</button>
+</form>
+{% endif %}
+{% endblock %}

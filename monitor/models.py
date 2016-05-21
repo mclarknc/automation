@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from tastypie.models import create_api_key
+import uuid
+import datetime
 
 models.signals.post_save.connect(create_api_key, sender=User)
 
@@ -74,7 +76,10 @@ class Channel(models.Model):
     channel_num = models.IntegerField()
     channel_type = models.ForeignKey(ChannelType)
     name = models.CharField(max_length=200)
+    rules = models.ManyToManyField('Rule', null=True, blank=True, db_index=True)
     status = models.IntegerField(choices=CHANNEL_STATUS_CHOICES)
+    last_reading = models.ForeignKey('Reading', related_name='channel_last_reading', null=True, blank=True)
+    last_alert = models.ForeignKey('Alert', related_name='channel_last_alert', null=True, blank=True)
 
     def get_units(self):
         return [self.channel_type.units.unit_imperial, self.channel_type.units.unit_metric]
@@ -91,12 +96,43 @@ class Reading(models.Model):
     channel = models.ForeignKey(Channel)
     value = models.FloatField()
     offset_value = models.FloatField(default = 0.0)
+    is_valid = models.BooleanField(default=True)
 
     def __str__(self):
         return ': '.join([self.monitor_time.strftime("%Y-%m-%d %H:%M:%S"), str(self.value)])
 
+    def save(self, *args, **kwargs):
+        from monitor.tasks import process_reading
+        self.value = float(self.value) + self.offset_value
+        # smooth out glitches
+        if self.channel.last_reading:
+            last_value = self.channel.last_reading.value
+            if abs((self.value - last_value) / last_value) > 0.35:
+                self.is_valid = False
+            else:
+                self.is_valid = True
+        else:
+            self.is_valid = True
+            
+        super(Reading, self).save(*args, **kwargs)
+
+        process_reading.delay(self.channel.id, self.id)
+        self.channel.last_reading = self
+        self.channel.save()
+        monitor = self.channel.monitor
+        monitor.last_update = datetime.datetime.now()
+        monitor.save()
+
 class Preference(models.Model):
+    EMAIL = 0
+    SMS = 1
+    BOTH = 2
+    CONTACT_CHOICES = ((EMAIL, 'email'),
+                       (SMS, 'text'),
+                       (BOTH, 'email and text'))
+
     user = models.ForeignKey(User)
+    contact_method = models.IntegerField(choices=CONTACT_CHOICES, default = EMAIL)
     measurement_system = models.IntegerField(choices=Unit.UNIT_CHOICES, default=Unit.IMPERIAL)
 
     def __str__(self):
@@ -118,20 +154,20 @@ class Rule(models.Model):
     RULE_PAUSED = 2
 
     # constants for specifying actions
-    SEND_EMAIL_ALERT = 0
-    SEND_TEXT_ALERT = 1
+    SEND_EMAIL_TEXT_ALERT = 0
+    SEND_GUI_ALERT = 1
     SEND_BOTH = 2
     ACTIONS = (
-        (SEND_EMAIL_ALERT, 'send email alert'),
-        (SEND_TEXT_ALERT, ' send text alert'),
-        (SEND_BOTH, 'send email and text alert'),
+        (SEND_EMAIL_TEXT_ALERT, 'send email/text alert'),
+        (SEND_GUI_ALERT, 'display gui alert'),
+        (SEND_BOTH, 'send email/text and gui alert'),
     )
 
     name = models.CharField(max_length=100)
     rule_type = models.ForeignKey(RuleType)
     lower_threshold = models.FloatField(null=True, blank=True)
     upper_threshold = models.FloatField(null=True, blank=True)
-    action = models.IntegerField()
+    action = models.IntegerField(choices=ACTIONS)
     contacts = models.ManyToManyField(User, related_name = 'rules_rule_contacts')
     state = models.IntegerField(default=RULE_ACTIVE)
 
@@ -142,30 +178,53 @@ class Rule(models.Model):
         elif self.upper_threshold and not self.lower_threshold:
             val = "{} {}".format(self.name, self.upper_threshold)
         else:
-            val = "{} {} and {}".format(self.name, self.lower_threshold self.upper_threshold)
+            val = "{} {} and {}".format(self.name, self.lower_threshold, self.upper_threshold)
         
         return val
 
     def __str__(self):
         return self.name
 
-    def evaluate(self, channel, reading):
+    def evaluate(self, reading):
         # get the eval function by name
         func = getattr(self, self.rule_type.eval_func)
         # call the eval function and return its result
-        return func(channel, reading)
+        return func(reading)
 
-    def eval_lt(self, channel, reading):
+    def eval_lt(self, reading):
         return reading.value < self.lower_threshold
 
-    def eval_lte(self, channel, reading):
+    def eval_lte(self, reading):
         return reading.value <= self.lower_threshold
 
-    def eval_gt(self, channel, reading):
+    def eval_gt(self, reading):
         return reading.value > self.upper_threshold
 
-    def eval_gte(self, channel, reading):
+    def eval_gte(self, reading):
         return reading.value >= self.upper_threshold
 
-    def range(self, channel, reading):
-        return self.eval_lt(channel, reading) or self.eval_gt(channel, reading)
+    def range(self, reading):
+        return self.eval_lt() or self.eval_gt()
+
+class Alert(models.Model):
+    CHANNEL_ALERT = 0
+    MONITOR_ALERT = 1
+    MONITOR_OVERDUE_ALERT = 2
+
+    alert_type = models.IntegerField(default=CHANNEL_ALERT)
+    monitor = models.ForeignKey(Monitor, null=True, blank=True)
+    channel = models.ForeignKey(Channel, null=True, blank=True)
+    alert_time = models.DateTimeField(auto_now_add=True)
+    acknowledged_by = models.ForeignKey(User, null=True, blank=True)
+    acknowledged_time = models.DateTimeField(null=True, blank=True)
+    resolved_time = models.DateTimeField(null=True, blank=True)
+    reading = models.ForeignKey(Reading, null=True)
+    rule = models.ForeignKey(Rule, null=True, default=None)
+    active = models.BooleanField(db_index=True)
+    uuid = models.UUIDField(db_index=True, default=uuid.uuid4)
+
+    def __str__(self):
+        if self.channel:
+            return ': '.join([self.channel.name, self.alert_time.strftime("%Y-%m-%d %H:%M:%S")])
+        else:
+            return ': '.join([self.monitor.name, self.alert_time.strftime("%Y-%m-%d %H:%M:%S")])
