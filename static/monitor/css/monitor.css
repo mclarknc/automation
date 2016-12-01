@@ -43,3 +43,8 @@ body {
 .large-text {
     font-size: 120%;
 }
+
+#spinner {
+    padding-top: 100px;
+    padding-left: 200px;
+}

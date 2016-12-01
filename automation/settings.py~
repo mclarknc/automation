@@ -23,9 +23,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '23_nxlp4%6yqcythyd*q!g5)gr6ls+e0ij)00*332^ha4w_slg'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['oldboy.net']
 SERVER_URL = 'oldboy.net'
 LOGIN_URL = '/monitor/login/'
 
@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_extensions',
     'djcelery',
     'garage',
     'monitor',
@@ -76,7 +77,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'automation.wsgi.application'
 
 # Celery settings
-BROKER_URL = 'transport://monitor:0k,1think@localhost:5672/monitor'
+BROKER_URL = 'amqp://monitor:0k,1think@localhost:5672/monitor'
 
 # Database
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases

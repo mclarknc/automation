@@ -1,3 +1,7 @@
 automation/settings.py
 *~
+\#*\#*.pyc
+__pycache__
 \#*\#
+.ipynb_checkpoints
+*.ipynb

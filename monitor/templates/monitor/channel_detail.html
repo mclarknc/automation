@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 {% block body %}
+{% load tz %}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
 
 <div class="col-md-9">
   <h4>{{ channel }}<small> last {{ days }} day{{ days|pluralize }}</small></h4>
@@ -15,16 +17,20 @@
   </div> <!-- alert -->
   {% endif %}
   <table>
-    <tr><td>Last Reading</td><td style="padding-left: 20px;">{{ channel.last_reading.value|floatformat:2 }} {{ channel.get_unit_abbrevs.1 }} on {{ channel.last_reading.monitor_time }}</td></tr>
-    <tr><td>Last Alert</td><td style="padding-left: 20px;">{% if channel.last_alert %}{{ channel.last_alert.rule.descriptive_name }} on {{ channel.last_alert.alert_time }}{% else %}None{% endif %}</td></tr>
+    <tr><td>Last Reading</td><td style="padding-left: 20px;">{% timezone "America/New_York" %}{{ channel.last_reading.value|floatformat:2 }} {{ channel.get_unit_abbrevs.1 }} on {{ channel.last_reading.monitor_time }}</td></tr>
+    <tr><td>Last Alert</td><td style="padding-left: 20px;">{% if channel.last_alert %}{{ channel.last_alert.rule.descriptive_name }} on {{ channel.last_alert.alert_time }}{% else %}None{% endif %}{% endtimezone %}</td></tr>
   </table>
+  <div id="spinner" class="col-md-9">
+    <i class="fa fa-circle-o-notch fa-spin" style="font-size:48px;"></i>
+  </div>
   <div id="plot" style="width: 1000px; height:350px;"></div>
 </div> <!-- col-md-9 -->
 <script>
-    $(function() {
-	$.ajax({
-	    url: "/monitor/get_readings/{{ channel.id }}/{{ days }}/"
-	})
+      $(function() {
+        $("#plot").hide()       
+        $.ajax({
+          url: "/monitor/get_readings/{{ channel.id }}/{{ days }}/"
+          })
           .done(function(results) {
               var xval = [];
               var yval = [];
@@ -47,6 +53,8 @@
                   }
               };
               Plotly.newPlot(plot, plotData, layout);
+              $("#spinner").hide();
+              $("#plot").show();
           });
     });
 
